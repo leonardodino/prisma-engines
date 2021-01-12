@@ -175,9 +175,47 @@ impl Display for DropIndex<'_> {
     }
 }
 
+#[derive(Debug, Default)]
+pub struct Column<'a> {
+    pub name: Cow<'a, str>,
+    pub r#type: Cow<'a, str>,
+    pub not_null: bool,
+    pub primary_key: bool,
+    pub default: Option<Cow<'a, str>>,
+    /// Whether to render AUTOINCREMENT on the primary key.
+    pub autoincrement: bool,
+}
+
+impl Display for Column<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "`{name}` {tpe}", name = self.name, tpe = self.r#type)
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct CreateTable<'a> {
+    pub table_name: Cow<'a, str>,
+    pub columns: Vec<Column<'a>>,
+    pub primary_key: Option<Vec<Cow<'a, str>>>,
+    pub foreign_keys: Vec<ForeignKey<'a>>,
+}
+
+impl Display for CreateTable<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("CREATE TABLE `")?;
+        self.table_name.fmt(f)?;
+        f.write_str("` (\n")?;
+
+        f.write_str(")")?;
+
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use indoc::indoc;
 
     #[test]
     fn alter_table_add_foreign_key() {
@@ -196,5 +234,18 @@ mod tests {
         let expected = "ALTER TABLE `Cat` ADD CONSTRAINT `myfk` FOREIGN KEY (`bestFriendId`) REFERENCES `Dog`(`id`) ON DELETE DO NOTHING ON UPDATE SET NULL";
 
         assert_eq!(alter_table.to_string(), expected);
+    }
+
+    #[test]
+    fn empty_create_table() {
+        let create_table: CreateTable = Default::default();
+
+        let expected = indoc!(
+            r#"
+            CREATE TABLE `` (
+            )"#
+        );
+
+        assert_eq!(create_table.to_string(), expected);
     }
 }
