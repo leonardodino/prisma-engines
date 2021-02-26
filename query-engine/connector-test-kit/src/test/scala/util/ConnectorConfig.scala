@@ -58,7 +58,7 @@ object ConnectorConfig {
       case "pgbouncer" =>
         ConnectorConfig("postgresql", s"postgresql://postgres:prisma@$postgres_11_Host:$postgres_11_Port/db?schema=$$DB&connection_limit=1", true, "pgbouncer")
       case "mysql"   => ConnectorConfig("mysql", s"mysql://root:prisma@$mysql_5_7_Host:3306/$$DB?connection_limit=1", false, "mysql")
-      case "mysql8"  => ConnectorConfig("mysql", s"mysql://root:prisma@$mysql_8_0_Host:$mysql_8_0_Port/$$DB?connection_limit=1", false, "mysql8")
+      case "mysql8"  => ConnectorConfig("mysql", s"mysql://root:1psyRWZ5t8a4W3Pht178NA@af7c59afd565f4aa6b069a1e5ea381e4-7702504.us-east-1.elb.amazonaws.com/prisma-demo?connection_limit=1", false, "mysql8")
       case "mysql56" => ConnectorConfig("mysql56", s"mysql://root:prisma@$mysql_5_6_Host:$mysql_5_6_Port/$$DB?connection_limit=1", false, "mysql56")
       case "mariadb" => ConnectorConfig("mysql", s"mysql://root:prisma@$mariadb_Host:$mariadb_Port/$$DB?connection_limit=1", false, "mariadb")
       case "mssql2017" => ConnectorConfig("sqlserver", s"sqlserver://$mssql_2017_Host:$mssql_2017_Port;database=master;schema=$$DB;user=SA;password=<YourStrong@Passw0rd>;trustServerCertificate=true;isolationLevel=READ UNCOMMITTED", false, "mssql2017")
