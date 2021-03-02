@@ -45,7 +45,11 @@ impl Clone for State {
 }
 
 /// Create a new server and listen.
+#[tracing::instrument]
 pub async fn listen(opts: PrismaOpt) -> PrismaResult<()> {
+    let root = tracing::span!(tracing::Level::TRACE, "app_start", work_units = 2);
+    let _enter = root.enter();
+
     let config = opts
         .configuration(false)?
         .subject
@@ -85,6 +89,7 @@ pub async fn listen(opts: PrismaOpt) -> PrismaResult<()> {
 
 /// The main query handler. This handles incoming GraphQL queries and passes it
 /// to the query engine.
+#[tracing::instrument(skip(req))]
 async fn graphql_handler(mut req: Request<State>) -> tide::Result {
     // Check for debug headers if enabled.
     if req.state().enable_debug_mode {
@@ -111,6 +116,7 @@ async fn graphql_handler(mut req: Request<State>) -> tide::Result {
 ///
 /// In production exposing the playground is equivalent to exposing the database
 /// on a port. This should never be enabled on production servers.
+#[tracing::instrument(skip(req))]
 async fn playground_handler(req: Request<State>) -> tide::Result {
     if !req.state().enable_playground {
         return Ok(Response::new(StatusCode::NotFound));
@@ -124,6 +130,7 @@ async fn playground_handler(req: Request<State>) -> tide::Result {
 
 /// Handler for the playground to work with the SDL-rendered query schema.
 /// Serves a raw SDL string created from the query schema.
+#[tracing::instrument(skip(req))]
 async fn sdl_handler(req: Request<State>) -> tide::Result<impl Into<Response>> {
     let schema = Arc::clone(&req.state().cx.query_schema());
     Ok(GraphQLSchemaRenderer::render(schema))
@@ -131,6 +138,7 @@ async fn sdl_handler(req: Request<State>) -> tide::Result<impl Into<Response>> {
 
 /// Renders the Data Model Meta Format.
 /// Only callable if prisma was initialized using a v2 data model.
+#[tracing::instrument(skip(req))]
 async fn dmmf_handler(req: Request<State>) -> tide::Result {
     let result = dmmf::render_dmmf(req.state().cx.datamodel(), Arc::clone(req.state().cx.query_schema()));
     let mut res = Response::new(StatusCode::Ok);
@@ -139,6 +147,7 @@ async fn dmmf_handler(req: Request<State>) -> tide::Result {
 }
 
 /// Simple status endpoint
+#[tracing::instrument(skip(req))]
 async fn server_info_handler(req: Request<State>) -> tide::Result<impl Into<Response>> {
     Ok(json!({
         "commit": env!("GIT_HASH"),

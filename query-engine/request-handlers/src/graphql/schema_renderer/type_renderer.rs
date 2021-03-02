@@ -7,6 +7,7 @@ pub enum GqlTypeRenderer<'a> {
 }
 
 impl<'a> Renderer for GqlTypeRenderer<'a> {
+    #[tracing::instrument(name = "render_graphql_type", skip(self, ctx))]
     fn render(&self, ctx: &mut RenderContext) -> String {
         match self {
             GqlTypeRenderer::Input(i) => self.render_input_type(i, ctx),

@@ -81,6 +81,8 @@ pub struct ConstructorOptions {
     #[serde(deserialize_with = "deserialize_log_level")]
     log_level: LevelFilter,
     datasource_overrides: BTreeMap<String, String>,
+    #[serde(default)]
+    enable_telemetry: bool,
 }
 
 fn deserialize_log_level<'de, D>(deserializer: D) -> Result<LevelFilter, D::Error>
@@ -98,6 +100,7 @@ impl QueryEngine {
             datamodel,
             log_level,
             datasource_overrides,
+            enable_telemetry,
         } = opts;
 
         let overrides: Vec<(_, _)> = datasource_overrides.into_iter().collect();
@@ -125,7 +128,11 @@ impl QueryEngine {
             datasource_overrides: overrides,
         };
 
-        let logger = ChannelLogger::new(log_level, log_callback);
+        let logger = if enable_telemetry {
+            ChannelLogger::new(log_level, log_callback)
+        } else {
+            ChannelLogger::new_with_telemetry(log_callback)
+        };
 
         let builder = EngineBuilder {
             config,

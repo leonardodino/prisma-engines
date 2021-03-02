@@ -10,6 +10,7 @@ use user_facing_errors::query_engine::DatabaseConstraint;
 
 /// Create a single record to the database defined in `conn`, resulting into a
 /// `RecordProjection` as an identifier pointing to the just-created record.
+#[tracing::instrument(skip(conn, model, args))]
 pub async fn create_record(conn: &dyn QueryExt, model: &ModelRef, args: WriteArgs) -> crate::Result<RecordProjection> {
     let (insert, returned_id) = write::create_record(model, args);
 
@@ -73,6 +74,7 @@ pub async fn create_record(conn: &dyn QueryExt, model: &ModelRef, args: WriteArg
     }
 }
 
+#[tracing::instrument(skip(conn, sql_info, model, args, skip_duplicates))]
 pub async fn create_records(
     conn: &dyn QueryExt,
     sql_info: SqlInfo,
@@ -166,6 +168,7 @@ pub async fn create_records(
 /// Update multiple records in a database defined in `conn` and the records
 /// defined in `args`, resulting the identifiers that were modified in the
 /// operation.
+#[tracing::instrument(skip(conn, model, record_filter, args))]
 pub async fn update_records(
     conn: &dyn QueryExt,
     model: &ModelRef,
@@ -192,6 +195,7 @@ pub async fn update_records(
 }
 
 /// Delete multiple records in `conn`, defined in the `Filter`. Result is the number of items deleted.
+#[tracing::instrument(skip(conn, model, record_filter))]
 pub async fn delete_records(
     conn: &dyn QueryExt,
     model: &ModelRef,
@@ -214,6 +218,7 @@ pub async fn delete_records(
 
 /// Connect relations defined in `child_ids` to a parent defined in `parent_id`.
 /// The relation information is in the `RelationFieldRef`.
+#[tracing::instrument(skip(conn, field, parent_id, child_ids))]
 pub async fn connect(
     conn: &dyn QueryExt,
     field: &RelationFieldRef,
@@ -228,6 +233,7 @@ pub async fn connect(
 
 /// Disconnect relations defined in `child_ids` to a parent defined in `parent_id`.
 /// The relation information is in the `RelationFieldRef`.
+#[tracing::instrument(skip(conn, field, parent_id, child_ids))]
 pub async fn disconnect(
     conn: &dyn QueryExt,
     field: &RelationFieldRef,
@@ -242,6 +248,7 @@ pub async fn disconnect(
 
 /// Execute a plain SQL query with the given parameters, returning the number of
 /// affected rows.
+#[tracing::instrument(skip(conn, query, parameters))]
 pub async fn execute_raw(conn: &dyn QueryExt, query: String, parameters: Vec<PrismaValue>) -> crate::Result<usize> {
     let value = conn.raw_count(query, parameters).await?;
     Ok(value)
@@ -249,6 +256,7 @@ pub async fn execute_raw(conn: &dyn QueryExt, query: String, parameters: Vec<Pri
 
 /// Execute a plain SQL query with the given parameters, returning the answer as
 /// a JSON `Value`.
+#[tracing::instrument(skip(conn, query, parameters))]
 pub async fn query_raw(
     conn: &dyn QueryExt,
     query: String,
@@ -260,6 +268,7 @@ pub async fn query_raw(
 
 /// Picks all arguments out of `args` that are updating a value for a field
 /// contained in `projection`, as those need to be merged into the records later on.
+#[tracing::instrument(skip(projection, args))]
 fn pick_args(projection: &ModelProjection, args: &WriteArgs) -> WriteArgs {
     let pairs: Vec<_> = projection
         .scalar_fields()
@@ -274,6 +283,7 @@ fn pick_args(projection: &ModelProjection, args: &WriteArgs) -> WriteArgs {
 }
 
 /// Merges the incoming write argument values into the given, already loaded, ids. Overwrites existing values.
+#[tracing::instrument(skip(loaded_ids, incoming_args))]
 fn merge_write_args(loaded_ids: Vec<RecordProjection>, incoming_args: WriteArgs) -> Vec<RecordProjection> {
     if loaded_ids.is_empty() || incoming_args.is_empty() {
         return loaded_ids;

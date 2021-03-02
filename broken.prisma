@@ -1,6 +1,6 @@
 datasource chinook {
-  provider = "sqlite"
-  url      = "file:./db/Chinook.db?connection_limit=1&socket_timeout=20"
+  provider = "postgres"
+  url      = "postgres://postgres:prisma@localhost:5434/postgres"
 }
 
 model Album {

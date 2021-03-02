@@ -6,6 +6,7 @@ use crate::{
 use connector::{ConnectionLike, WriteOperations};
 use prisma_value::PrismaValue;
 
+#[tracing::instrument(skip(tx, write_query))]
 pub async fn execute<'a, 'b>(
     tx: &'a ConnectionLike<'a, 'b>,
     write_query: WriteQuery,
@@ -24,6 +25,7 @@ pub async fn execute<'a, 'b>(
     }
 }
 
+#[tracing::instrument(skip(tx, query, parameters))]
 async fn query_raw<'a, 'b>(
     tx: &'a ConnectionLike<'a, 'b>,
     query: String,
@@ -33,6 +35,7 @@ async fn query_raw<'a, 'b>(
     Ok(QueryResult::Json(res))
 }
 
+#[tracing::instrument(skip(tx, query, parameters))]
 async fn execute_raw<'a, 'b>(
     tx: &'a ConnectionLike<'a, 'b>,
     query: String,
@@ -44,12 +47,14 @@ async fn execute_raw<'a, 'b>(
     Ok(QueryResult::Json(num))
 }
 
+#[tracing::instrument(skip(tx, q))]
 async fn create_one<'a, 'b>(tx: &'a ConnectionLike<'a, 'b>, q: CreateRecord) -> InterpretationResult<QueryResult> {
     let res = tx.create_record(&q.model, q.args).await?;
 
     Ok(QueryResult::Id(Some(res)))
 }
 
+#[tracing::instrument(skip(tx, q))]
 async fn create_many<'a, 'b>(
     tx: &'a ConnectionLike<'a, 'b>,
     q: CreateManyRecords,
@@ -59,12 +64,14 @@ async fn create_many<'a, 'b>(
     Ok(QueryResult::Count(affected_records))
 }
 
+#[tracing::instrument(skip(tx, q))]
 async fn update_one<'a, 'b>(tx: &'a ConnectionLike<'a, 'b>, q: UpdateRecord) -> InterpretationResult<QueryResult> {
     let mut res = tx.update_records(&q.model, q.record_filter, q.args).await?;
 
     Ok(QueryResult::Id(res.pop()))
 }
 
+#[tracing::instrument(skip(tx, q))]
 async fn delete_one<'a, 'b>(tx: &'a ConnectionLike<'a, 'b>, q: DeleteRecord) -> InterpretationResult<QueryResult> {
     // We need to ensure that we have a record finder, else we delete everything (conversion to empty filter).
     let filter = match q.record_filter {
@@ -80,6 +87,7 @@ async fn delete_one<'a, 'b>(tx: &'a ConnectionLike<'a, 'b>, q: DeleteRecord) -> 
     Ok(QueryResult::Count(res))
 }
 
+#[tracing::instrument(skip(tx, q))]
 async fn update_many<'a, 'b>(
     tx: &'a ConnectionLike<'a, 'b>,
     q: UpdateManyRecords,
@@ -89,6 +97,7 @@ async fn update_many<'a, 'b>(
     Ok(QueryResult::Count(res.len()))
 }
 
+#[tracing::instrument(skip(tx, q))]
 async fn delete_many<'a, 'b>(
     tx: &'a ConnectionLike<'a, 'b>,
     q: DeleteManyRecords,
@@ -98,6 +107,7 @@ async fn delete_many<'a, 'b>(
     Ok(QueryResult::Count(res))
 }
 
+#[tracing::instrument(skip(tx, q))]
 async fn connect<'a, 'b>(tx: &'a ConnectionLike<'a, 'b>, q: ConnectRecords) -> InterpretationResult<QueryResult> {
     tx.connect(
         &q.relation_field,
@@ -109,6 +119,7 @@ async fn connect<'a, 'b>(tx: &'a ConnectionLike<'a, 'b>, q: ConnectRecords) -> I
     Ok(QueryResult::Unit)
 }
 
+#[tracing::instrument(skip(tx, q))]
 async fn disconnect<'a, 'b>(tx: &'a ConnectionLike<'a, 'b>, q: DisconnectRecords) -> InterpretationResult<QueryResult> {
     tx.disconnect(
         &q.relation_field,

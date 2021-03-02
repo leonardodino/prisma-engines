@@ -72,6 +72,7 @@ where
     /// A failing operation does not fail the batch, instead, an error is returned alongside other responses.
     /// Note that individual operations executed in non-transactional mode can still be transactions in themselves
     /// if the query (e.g. a write op) requires it.
+    #[tracing::instrument(skip(self, operations, query_schema))]
     async fn execute_batch(
         &self,
         operations: Vec<Operation>,
@@ -125,6 +126,7 @@ where
     }
 
     /// Executes a single operation. Execution will be inside of a transaction or not depending on the needs of the query.
+    #[tracing::instrument(skip(self, operation, query_schema))]
     async fn execute(&self, operation: Operation, query_schema: QuerySchemaRef) -> crate::Result<ResponseData> {
         let conn = self.connector.get_connection().await?;
         Self::execute_single_operation(operation, conn, self.force_transactions, query_schema.clone()).await

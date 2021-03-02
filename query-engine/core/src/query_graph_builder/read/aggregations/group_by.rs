@@ -8,6 +8,7 @@ use crate::{
 use connector::Filter;
 use prisma_models::{ModelRef, OrderBy, ScalarFieldRef};
 
+#[tracing::instrument]
 pub fn group_by(mut field: ParsedField, model: ModelRef) -> QueryGraphBuilderResult<ReadQuery> {
     let name = field.name;
     let alias = field.alias;
@@ -47,6 +48,7 @@ pub fn group_by(mut field: ParsedField, model: ModelRef) -> QueryGraphBuilderRes
 
 /// Cross checks that the selections of the request are valid with regard to the requested group bys:
 /// Every plain scalar field in the selectors must be present in the group by as well.
+#[tracing::instrument]
 fn verify_selections(selectors: &[AggregationSelection], group_by: &[ScalarFieldRef]) -> QueryGraphBuilderResult<()> {
     let mut missing_fields = vec![];
 
@@ -71,6 +73,7 @@ fn verify_selections(selectors: &[AggregationSelection], group_by: &[ScalarField
 
 /// Cross checks that the requested order-bys of the request are valid with regard to the requested group bys.
 /// Every ordered field must be present in the group by as well. (Note: We do not yet allow order by aggregate)
+#[tracing::instrument]
 fn verify_orderings(orderings: &[OrderBy], group_by: &[ScalarFieldRef]) -> QueryGraphBuilderResult<()> {
     let mut missing_fields = vec![];
 
@@ -91,6 +94,7 @@ fn verify_orderings(orderings: &[OrderBy], group_by: &[ScalarFieldRef]) -> Query
 }
 
 /// Cross checks that every scalar field used in `having` is either an aggregate or contained in the selectors.
+#[tracing::instrument]
 fn verify_having(having: Option<&Filter>, selectors: &[AggregationSelection]) -> QueryGraphBuilderResult<()> {
     if let Some(filter) = having {
         let having_fields: Vec<&ScalarFieldRef> = collect_scalar_fields(filter);
@@ -127,6 +131,7 @@ fn verify_having(having: Option<&Filter>, selectors: &[AggregationSelection]) ->
 }
 
 /// Collects all flat scalar fields that are used in the having filter.
+#[tracing::instrument]
 fn collect_scalar_fields(filter: &Filter) -> Vec<&ScalarFieldRef> {
     match filter {
         Filter::And(inner) => inner.iter().flat_map(|f| collect_scalar_fields(f)).collect(),
@@ -138,6 +143,7 @@ fn collect_scalar_fields(filter: &Filter) -> Vec<&ScalarFieldRef> {
     }
 }
 
+#[tracing::instrument]
 fn extract_grouping(value: ParsedInputValue) -> QueryGraphBuilderResult<Vec<ScalarFieldRef>> {
     match value {
         ParsedInputValue::ScalarField(field) => Ok(vec![field]),

@@ -86,6 +86,10 @@ pub struct PrismaOpt {
     #[structopt(long = "log-format", env = "RUST_LOG_FORMAT")]
     pub log_format: Option<String>,
 
+    /// Enable OpenTelemetry streaming from requests.
+    #[structopt(long)]
+    pub open_telemetry: bool,
+
     #[structopt(subcommand)]
     pub subcommand: Option<Subcommand>,
 

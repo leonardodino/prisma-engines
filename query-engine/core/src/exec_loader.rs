@@ -17,6 +17,7 @@ use sql_connector::*;
 
 const DEFAULT_SQLITE_DB_NAME: &str = "main";
 
+#[tracing::instrument(name = "exec_loader", skip(source))]
 pub async fn load(source: &Datasource) -> crate::Result<(String, Box<dyn QueryExecutor + Send + Sync>)> {
     match source.active_provider.as_str() {
         SQLITE_SOURCE_NAME => sqlite(source).await,

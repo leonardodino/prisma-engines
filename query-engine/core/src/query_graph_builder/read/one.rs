@@ -4,6 +4,7 @@ use prisma_models::ModelRef;
 use std::convert::TryInto;
 
 /// Builds a read query from a parsed incoming read query field.
+#[tracing::instrument]
 pub fn find_unique(mut field: ParsedField, model: ModelRef) -> QueryGraphBuilderResult<ReadQuery> {
     let filter = match field.arguments.lookup(args::WHERE) {
         Some(where_arg) => {

@@ -34,6 +34,7 @@ type UncheckedItemsWithParents = IndexMap<Option<RecordProjection>, Vec<Item>>;
 /// // todo more here
 ///
 /// Returns a map of pairs of (parent ID, response)
+#[tracing::instrument(skip(result, field, is_list))]
 pub fn serialize_internal(
     result: QueryResult,
     field: &OutputFieldRef,
@@ -60,6 +61,7 @@ pub fn serialize_internal(
     }
 }
 
+#[tracing::instrument(skip(output_field, record_aggregations))]
 fn serialize_aggregations(
     output_field: &OutputFieldRef,
     record_aggregations: RecordAggregations,
@@ -187,6 +189,7 @@ fn coerce_non_numeric(value: PrismaValue, output: &OutputType) -> PrismaValue {
     }
 }
 
+#[tracing::instrument(skip(record_selection, field, typ, is_list))]
 fn serialize_record_selection(
     record_selection: RecordSelection,
     field: &OutputFieldRef,
@@ -258,6 +261,7 @@ fn serialize_record_selection(
 /// Serializes the given result into objects of given type.
 /// Doesn't validate the shape of the result set ("unchecked" result).
 /// Returns a vector of serialized objects (as Item::Map), grouped into a map by parent, if present.
+#[tracing::instrument(skip(result, typ))]
 fn serialize_objects(
     mut result: RecordSelection,
     typ: ObjectTypeStrongRef,
@@ -284,52 +288,60 @@ fn serialize_objects(
 
     // Write all fields, nested and list fields unordered into a map, afterwards order all into the final order.
     // If nothing is written to the object, write null instead.
-    for record in result.scalars.records.into_iter() {
-        let record_id = Some(record.projection(&scalar_db_field_names, &result.model_id)?);
+    {
+        let span = tracing::span!(tracing::Level::TRACE, "results loop");
+        let _enter = span.enter();
 
-        if !object_mapping.contains_key(&record.parent_id) {
-            object_mapping.insert(record.parent_id.clone(), Vec::new());
-        }
+        for (i, record) in result.scalars.records.into_iter().enumerate() {
+            let span = tracing::span!(tracing::Level::TRACE, "loop iteration", iteration = i);
+            let _enter = span.enter();
+            let record_id = Some(record.projection(&scalar_db_field_names, &result.model_id)?);
 
-        // Write scalars, but skip objects and lists, which while they are in the selection, are handled separately.
-        let values = record.values;
-        let mut object = HashMap::with_capacity(values.len());
-
-        for (val, scalar_field_name) in values.into_iter().zip(field_names.iter()) {
-            let field = typ.find_field(scalar_field_name).unwrap();
-
-            if !field.field_type.is_object() {
-                object.insert(scalar_field_name.to_owned(), serialize_scalar(&field, val)?);
+            if !object_mapping.contains_key(&record.parent_id) {
+                object_mapping.insert(record.parent_id.clone(), Vec::new());
             }
+
+            // Write scalars, but skip objects and lists, which while they are in the selection, are handled separately.
+            let values = record.values;
+            let mut object = HashMap::with_capacity(values.len());
+
+            for (val, scalar_field_name) in values.into_iter().zip(field_names.iter()) {
+                let field = typ.find_field(scalar_field_name).unwrap();
+
+                if !field.field_type.is_object() {
+                    object.insert(scalar_field_name.to_owned(), serialize_scalar(&field, val)?);
+                }
+            }
+
+            // Write nested results
+            write_nested_items(&record_id, &mut nested_mapping, &mut object, &typ);
+
+            let map = result
+                .fields
+                .iter()
+                .fold(Map::with_capacity(result.fields.len()), |mut acc, field_name| {
+                    acc.insert(field_name.to_owned(), object.remove(field_name).unwrap());
+                    acc
+                });
+
+            // TODO: Find out how to easily determine when a result is null.
+            // If the object is null or completely empty, coerce into null instead.
+            let result = Item::Map(map);
+            // let result = if result.is_null_or_empty() {
+            //     Item::Value(PrismaValue::Null)
+            // } else {
+            //     result
+            // };
+
+            object_mapping.get_mut(&record.parent_id).unwrap().push(result);
         }
-
-        // Write nested results
-        write_nested_items(&record_id, &mut nested_mapping, &mut object, &typ);
-
-        let map = result
-            .fields
-            .iter()
-            .fold(Map::with_capacity(result.fields.len()), |mut acc, field_name| {
-                acc.insert(field_name.to_owned(), object.remove(field_name).unwrap());
-                acc
-            });
-
-        // TODO: Find out how to easily determine when a result is null.
-        // If the object is null or completely empty, coerce into null instead.
-        let result = Item::Map(map);
-        // let result = if result.is_null_or_empty() {
-        //     Item::Value(PrismaValue::Null)
-        // } else {
-        //     result
-        // };
-
-        object_mapping.get_mut(&record.parent_id).unwrap().push(result);
     }
 
     Ok(object_mapping)
 }
 
 /// Unwraps are safe due to query validation.
+#[tracing::instrument(skip(record_id, items_with_parent, into, enclosing_type))]
 fn write_nested_items(
     record_id: &Option<RecordProjection>,
     items_with_parent: &mut HashMap<String, CheckedItemsWithParents>,
@@ -364,6 +376,7 @@ fn write_nested_items(
 }
 
 /// Processes nested results into a more ergonomic structure of { <nested field name> -> { parent ID -> item (list, map, ...) } }.
+#[tracing::instrument(skip(nested, enclosing_type))]
 fn process_nested_results(
     nested: Vec<QueryResult>,
     enclosing_type: &ObjectTypeStrongRef,

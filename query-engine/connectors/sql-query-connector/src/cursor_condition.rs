@@ -62,6 +62,7 @@ static ORDER_TABLE_ALIAS: &str = "order_cmp";
 ///   )
 ///   -- ...
 /// ```
+#[tracing::instrument(name = "build_cursor_condition", skip(query_arguments, model))]
 pub fn build(query_arguments: &QueryArguments, model: &ModelRef) -> (Option<Table<'static>>, ConditionTree<'static>) {
     match query_arguments.cursor {
         None => (None, ConditionTree::NoCondition),

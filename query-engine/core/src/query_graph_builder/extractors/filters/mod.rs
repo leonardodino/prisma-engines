@@ -64,6 +64,7 @@ fn handle_compound_field(fields: Vec<ScalarFieldRef>, value: ParsedInputValue) -
 /// | OR   | return empty list | validate single filter | validate all filters |
 /// | AND  | return all items  | validate single filter | validate all filters |
 /// | NOT  | return all items  | validate single filter | validate all filters |
+#[tracing::instrument]
 pub fn extract_filter(value_map: ParsedInputMap, model: &ModelRef) -> QueryGraphBuilderResult<Filter> {
     // We define an internal function so we can track the recursion depth. Empty
     // filters at the root layer can not always be removed.
@@ -146,6 +147,7 @@ pub fn extract_filter(value_map: ParsedInputMap, model: &ModelRef) -> QueryGraph
 
 /// Field is the field the filter is refering to and `value` is the passed filter. E.g. `where: { <field>: <value> }.
 /// `value` can be either a flat scalar (for shorthand filter notation) or an object (full filter syntax).
+#[tracing::instrument]
 fn extract_scalar_filters(field: &ScalarFieldRef, value: ParsedInputValue) -> QueryGraphBuilderResult<Vec<Filter>> {
     match value {
         ParsedInputValue::Single(pv) => Ok(vec![field.equals(pv)]),
@@ -175,6 +177,7 @@ fn extract_scalar_filters(field: &ScalarFieldRef, value: ParsedInputValue) -> Qu
 
 /// Field is the field the filter is refering to and `value` is the passed filter. E.g. `where: { <field>: <value> }.
 /// `value` can be either a filter object (for shorthand filter notation) or an object (full filter syntax).
+#[tracing::instrument]
 fn extract_relation_filters(field: &RelationFieldRef, value: ParsedInputValue) -> QueryGraphBuilderResult<Vec<Filter>> {
     match value {
         // Implicit is null filter (`where: { <field>: null }`)
@@ -202,6 +205,7 @@ fn extract_relation_filters(field: &RelationFieldRef, value: ParsedInputValue) -
     }
 }
 
+#[tracing::instrument]
 fn parse_query_mode(input: ParsedInputValue) -> QueryGraphBuilderResult<QueryMode> {
     let value: PrismaValue = input.try_into()?;
     let s = match value {

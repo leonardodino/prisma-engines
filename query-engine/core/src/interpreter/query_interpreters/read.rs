@@ -5,6 +5,7 @@ use futures::future::{BoxFuture, FutureExt};
 use inmemory_record_processor::InMemoryRecordProcessor;
 use prisma_models::ManyRecords;
 
+#[tracing::instrument(skip(tx, query, parent_result))]
 pub fn execute<'a, 'b>(
     tx: &'a ConnectionLike<'a, 'b>,
     query: ReadQuery,
@@ -23,6 +24,7 @@ pub fn execute<'a, 'b>(
 }
 
 /// Queries a single record.
+#[tracing::instrument(skip(tx, query))]
 fn read_one<'conn, 'tx>(
     tx: &'conn ConnectionLike<'conn, 'tx>,
     query: RecordQuery,
@@ -69,6 +71,7 @@ fn read_one<'conn, 'tx>(
 ///    We need to select IDs / uniques alongside the distincts, which doesn't work in SQL, as all records
 ///    are distinct by definition if a unique is in the selection set.
 /// -> Unstable cursors can't reliably be fetched by the underlying datasource, so we need to process part of it in-memory.
+#[tracing::instrument(skip(tx, query))]
 fn read_many<'a, 'b>(
     tx: &'a ConnectionLike<'a, 'b>,
     mut query: ManyRecordsQuery,
@@ -104,6 +107,7 @@ fn read_many<'a, 'b>(
 }
 
 /// Queries related records for a set of parent IDs.
+#[tracing::instrument(skip(tx, query, parent_result))]
 fn read_related<'a, 'b>(
     tx: &'a ConnectionLike<'a, 'b>,
     mut query: RelatedRecordsQuery,
@@ -147,6 +151,7 @@ fn read_related<'a, 'b>(
     fut.boxed()
 }
 
+#[tracing::instrument(skip(tx, query))]
 async fn aggregate<'a, 'b>(
     tx: &'a ConnectionLike<'a, 'b>,
     query: AggregateRecordsQuery,
@@ -163,6 +168,7 @@ async fn aggregate<'a, 'b>(
     }))
 }
 
+#[tracing::instrument(skip(tx, nested, parent_result))]
 fn process_nested<'a, 'b>(
     tx: &'a ConnectionLike<'a, 'b>,
     nested: Vec<ReadQuery>,

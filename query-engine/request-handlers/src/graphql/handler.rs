@@ -6,11 +6,17 @@ use query_core::{
     BatchDocument, CompactedDocument, Item, Operation, QueryDocument, QueryExecutor, QuerySchemaRef, QueryValue,
     ResponseData,
 };
-use std::panic::AssertUnwindSafe;
+use std::{fmt, panic::AssertUnwindSafe};
 
 pub struct GraphQlHandler<'a> {
     executor: &'a (dyn QueryExecutor + Send + Sync + 'a),
     query_schema: &'a QuerySchemaRef,
+}
+
+impl<'a> fmt::Debug for GraphQlHandler<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("GraphQlHandler").finish()
+    }
 }
 
 impl<'a> GraphQlHandler<'a> {
@@ -18,9 +24,8 @@ impl<'a> GraphQlHandler<'a> {
         Self { executor, query_schema }
     }
 
+    #[tracing::instrument(skip(self, body))]
     pub async fn handle(&self, body: GraphQlBody) -> PrismaResponse {
-        tracing::debug!("Incoming GraphQL query: {:?}", body);
-
         match body.into_doc() {
             Ok(QueryDocument::Single(query)) => self.handle_single(query).await,
             Ok(QueryDocument::Multi(batch)) => match batch.compact() {
@@ -31,6 +36,7 @@ impl<'a> GraphQlHandler<'a> {
         }
     }
 
+    #[tracing::instrument(skip(self, query))]
     async fn handle_single(&self, query: Operation) -> PrismaResponse {
         use user_facing_errors::Error;
 
@@ -47,6 +53,7 @@ impl<'a> GraphQlHandler<'a> {
         PrismaResponse::Single(gql_response)
     }
 
+    #[tracing::instrument(skip(self, queries))]
     async fn handle_batch(&self, queries: Vec<Operation>, transactional: bool) -> PrismaResponse {
         use user_facing_errors::Error;
 
@@ -79,6 +86,7 @@ impl<'a> GraphQlHandler<'a> {
         }
     }
 
+    #[tracing::instrument(skip(self, document))]
     async fn handle_compacted(&self, document: CompactedDocument) -> PrismaResponse {
         use user_facing_errors::Error;
 
@@ -146,6 +154,7 @@ impl<'a> GraphQlHandler<'a> {
         }
     }
 
+    #[tracing::instrument(skip(self, query_doc))]
     async fn handle_graphql(&self, query_doc: Operation) -> query_core::Result<ResponseData> {
         self.executor.execute(query_doc, self.query_schema.clone()).await
     }

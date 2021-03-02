@@ -15,6 +15,7 @@ use std::convert::{identity, TryInto};
 /// Expects the caller to know that it is structurally guaranteed that query arguments can be extracted,
 /// e.g. that the query schema guarantees that required fields are present.
 /// Errors occur if conversions fail.
+#[tracing::instrument]
 pub fn extract_query_args(arguments: Vec<ParsedArgument>, model: &ModelRef) -> QueryGraphBuilderResult<QueryArguments> {
     let query_args = arguments.into_iter().fold(
         Ok(QueryArguments::new(model.clone())),
@@ -69,6 +70,7 @@ pub fn extract_query_args(arguments: Vec<ParsedArgument>, model: &ModelRef) -> Q
 }
 
 /// Extracts order by conditions in order of appearance.
+#[tracing::instrument]
 fn extract_order_by(model: &ModelRef, value: ParsedInputValue) -> QueryGraphBuilderResult<Vec<OrderBy>> {
     match value {
         ParsedInputValue::List(list) => list
@@ -89,6 +91,7 @@ fn extract_order_by(model: &ModelRef, value: ParsedInputValue) -> QueryGraphBuil
     }
 }
 
+#[tracing::instrument]
 fn process_order_object(
     model: &ModelRef,
     object: ParsedInputMap,
@@ -120,6 +123,7 @@ fn process_order_object(
     }
 }
 
+#[tracing::instrument]
 fn extract_distinct(value: ParsedInputValue) -> QueryGraphBuilderResult<ModelProjection> {
     let fields: Vec<Field> = match value {
         ParsedInputValue::List(list) => list
@@ -135,6 +139,7 @@ fn extract_distinct(value: ParsedInputValue) -> QueryGraphBuilderResult<ModelPro
     Ok(ModelProjection::new(fields))
 }
 
+#[tracing::instrument]
 fn extract_skip(value: ParsedInputValue) -> QueryGraphBuilderResult<Option<i64>> {
     let val: Option<i64> = value.try_into()?;
 
@@ -148,6 +153,7 @@ fn extract_skip(value: ParsedInputValue) -> QueryGraphBuilderResult<Option<i64>>
     }
 }
 
+#[tracing::instrument]
 fn extract_cursor(value: ParsedInputValue, model: &ModelRef) -> QueryGraphBuilderResult<Option<RecordProjection>> {
     let input_map: ParsedInputMap = value.try_into()?;
     let mut pairs = vec![];
@@ -172,6 +178,7 @@ fn extract_cursor(value: ParsedInputValue, model: &ModelRef) -> QueryGraphBuilde
     Ok(Some(RecordProjection::new(pairs)))
 }
 
+#[tracing::instrument]
 fn extract_cursor_field(
     field: ScalarFieldRef,
     input_value: ParsedInputValue,
@@ -180,6 +187,7 @@ fn extract_cursor_field(
     Ok(vec![(field, value)])
 }
 
+#[tracing::instrument]
 fn extract_compound_cursor_field(
     fields: Vec<ScalarFieldRef>,
     input_value: ParsedInputValue,
@@ -196,6 +204,7 @@ fn extract_compound_cursor_field(
 }
 
 /// Runs final transformations on the QueryArguments.
+#[tracing::instrument]
 fn finalize_arguments(mut args: QueryArguments, model: &ModelRef) -> QueryArguments {
     // Check if the query requires an implicit ordering added to the arguments.
     // An implicit ordering is convenient for deterministic results for take and skip, for cursor it's _required_
